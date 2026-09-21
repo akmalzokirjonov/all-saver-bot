@@ -1,4 +1,4 @@
-# TelebramBot 🤖
+# All Saver Bot 🤖
 
 > Telegram media downloader bot — Instagram, TikTok, YouTube, Twitter/X, Facebook, Vimeo, SoundCloud, Pinterest, Reddit + 1500+ sites via yt-dlp.
 
@@ -25,8 +25,8 @@
 ### 1. Clone & configure
 
 ```bash
-git clone <repo-url>
-cd Telegram-Bot
+git clone https://github.com/akmalzokirjonov/all-saver-bot.git
+cd all-saver-bot
 cp .env.example .env
 ```
 
@@ -168,7 +168,7 @@ Instagram · TikTok · YouTube · Twitter/X · Facebook · Vimeo · SoundCloud �
 
 ---
 
-# TelebramBot 🤖 (O'zbekcha)
+# All Saver Bot 🤖 (O'zbekcha)
 
 > Telegram media yuklovchi bot — Instagram, TikTok, YouTube, Twitter/X, Facebook, Vimeo, SoundCloud, Pinterest, Reddit va yt-dlp orqali 1500+ sayt.
 
@@ -177,8 +177,8 @@ Instagram · TikTok · YouTube · Twitter/X · Facebook · Vimeo · SoundCloud �
 ### Docker bilan (tavsiya etiladi)
 
 ```bash
-git clone <repo-url>
-cd Telegram-Bot
+git clone https://github.com/akmalzokirjonov/all-saver-bot.git
+cd all-saver-bot
 cp .env.example .env
 nano .env   # BOT_TOKEN va ADMIN_IDS ni kiriting
 
