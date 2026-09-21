@@ -24,9 +24,5 @@ COPY . .
 # ── Storage directories ───────────────────────────────────────────────────
 RUN mkdir -p /tmp/tg_downloads logs
 
-# ── Healthcheck ───────────────────────────────────────────────────────────
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD python -c "import sys; sys.exit(0)"
-
 # ── Entrypoint ────────────────────────────────────────────────────────────
 CMD ["python", "main.py"]

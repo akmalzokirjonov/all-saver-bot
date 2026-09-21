@@ -1,11 +1,12 @@
 """Centralised configuration via pydantic-settings."""
 from __future__ import annotations
 
+import json
 import os
-from typing import List
+from typing import Annotated, List
 
 from pydantic import field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -21,12 +22,14 @@ class Settings(BaseSettings):
     BOT_USERNAME: str = "TelebramBot"
 
     # ── Admins ───────────────────────────────────────────────────────────────
-    ADMIN_IDS: List[int] = []
+    ADMIN_IDS: Annotated[List[int], NoDecode] = []
 
     @field_validator("ADMIN_IDS", mode="before")
     @classmethod
     def parse_admin_ids(cls, v):
         if isinstance(v, str):
+            if v.strip().startswith("["):
+                return json.loads(v)
             return [int(x.strip()) for x in v.split(",") if x.strip()]
         if isinstance(v, int):
             return [v]

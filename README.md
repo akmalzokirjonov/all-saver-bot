@@ -1,228 +1,154 @@
-# All Saver Bot 🤖
+<img src="./docs/project-cover.svg" width="100%" alt="All Saver Bot — Telegram media and automation" />
 
-> Telegram media downloader bot — Instagram, TikTok, YouTube, Twitter/X, Facebook, Vimeo, SoundCloud, Pinterest, Reddit + 1500+ sites via yt-dlp.
+**A multilingual Telegram bot for downloading and managing media.**
 
----
+[![Python checks](https://github.com/akmalzokirjonov/all-saver-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/akmalzokirjonov/all-saver-bot/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)
+![aiogram](https://img.shields.io/badge/aiogram-3-26A5E4?logo=telegram&logoColor=white)
 
-## 📋 Features
+[Features](#features) · [Quick start](#quick-start) · [Configuration](#configuration) · [Development](#development) · [O'zbekcha](#ozbekcha)
 
-- 🎬 Download from **1500+ sites** via yt-dlp
-- 📊 Quality selection: Best / 1080p / 720p / 480p / Audio MP3 / Low size
-- 🔄 Auto-retry with exponential backoff (up to 10 attempts)
-- 📦 Auto-compression via ffmpeg if file >50 MB
-- 🔗 External upload (catbox.moe) as final fallback
-- 🍪 Per-user cookies for private/restricted content
-- 📁 User file upload & 24h temporary storage
-- 🌐 Multi-language: English, O'zbek, Русский
-- 🛡️ Throttling middleware + concurrency limits
-- 📊 Admin `/stats` command
-- 🐳 Docker + docker-compose ready
+## Overview
 
----
+Send a supported media URL to the bot, select a quality, and receive the result in Telegram. The interface supports **English, Uzbek, and Russian**.
 
-## 🚀 Quick Start
+This repository contains the Python application and Docker configuration. It does not include a hosted bot account or production credentials.
 
-### 1. Clone & configure
+## Features
+
+- Media extraction through yt-dlp, with quality selection and audio output.
+- Retry handling, download progress, and FFmpeg compression for large files.
+- Per-user and global download concurrency controls.
+- User media uploads, file management, and configurable metadata expiry.
+- Optional user-supplied cookies for authenticated downloads.
+- Redis-backed conversation state and usage counters.
+- Admin statistics through `/stats`.
+
+Supported sites and available formats depend on yt-dlp and the source platform. External upload fallbacks may send media to third-party services; review `utils/uploader.py` before operating a public instance.
+
+## Quick start
+
+### Docker Compose
+
+Install Docker with Compose, then:
 
 ```bash
 git clone https://github.com/akmalzokirjonov/all-saver-bot.git
 cd all-saver-bot
 cp .env.example .env
 ```
+
+On Windows PowerShell, use `Copy-Item .env.example .env`.
 
 Edit `.env`:
-```env
-BOT_TOKEN=your_bot_token_from_BotFather
-ADMIN_IDS=your_telegram_user_id
+
+```dotenv
+BOT_TOKEN=replace_with_your_botfather_token
+BOT_USERNAME=your_bot_username
+ADMIN_IDS=123456789,987654321
 ```
 
-### 2. Run with Docker (recommended)
+`ADMIN_IDS` is optional. Use numeric IDs separated by commas, a JSON array, or leave it empty to disable admin access.
 
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
+docker compose logs -f bot
+# Stop containers; named data volumes are retained:
+docker compose down
 ```
 
-View logs:
-```bash
-docker-compose logs -f bot
-```
+The polling process requires a continuously running host. Redis has a dependency health check; the bot container's running state does not prove that Telegram or a source website is reachable.
 
-Stop:
-```bash
-docker-compose down
-```
+### Local development
 
-### 3. Run locally (dev)
+Requires **Python 3.12+**, **Redis**, **FFmpeg**, and a JavaScript runtime supported by yt-dlp for sites that need one.
 
 ```bash
-python -m venv venv
-source venv/bin/activate          # Windows: venv\Scripts\activate
+python -m venv .venv
+source .venv/bin/activate
+# Windows PowerShell: .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-
-# Start Redis (Docker)
-docker run -d -p 6379:6379 redis:7-alpine
-
-# Update .env: REDIS_URL=redis://localhost:6379/0
-python main.py
 ```
 
----
+Start Redis locally and set these values in `.env`:
 
-## ⚙️ Configuration (`.env`)
+```dotenv
+REDIS_URL=redis://localhost:6379/0
+DOWNLOAD_DIR=./tg_downloads
+```
 
-| Variable | Default | Description |
-|---|---|---|
-| `BOT_TOKEN` | **required** | Token from @BotFather |
-| `ADMIN_IDS` | `""` | Comma-separated admin user IDs |
-| `REDIS_URL` | `redis://redis:6379/0` | Redis connection URL |
-| `DOWNLOAD_DIR` | `/tmp/tg_downloads` | Temp download directory |
-| `MAX_FILE_SIZE_MB` | `50` | Telegram upload limit |
-| `MAX_CONCURRENT_PER_USER` | `2` | Max simultaneous downloads per user |
-| `MAX_PLAYLIST_VIDEOS` | `5` | Max videos from playlists |
-| `COOKIE_EXPIRE_DAYS` | `30` | Cookie storage TTL |
-| `FILE_EXPIRE_HOURS` | `24` | User file storage TTL |
-| `DEFAULT_LANG` | `en` | Default language (`en`/`uz`/`ru`) |
+Then run `python main.py`. Do not run a second polling instance with the same bot token.
+
+## Configuration
+
+| Variable | Default | Purpose |
+| :--- | :--- | :--- |
+| `BOT_TOKEN` | Required | Telegram token from BotFather |
+| `ADMIN_IDS` | Empty | IDs allowed to use admin commands |
+| `BOT_USERNAME` | `TelebramBot` | Bot name used in startup logging |
+| `REDIS_URL` | `redis://localhost:6379/0` | Redis connection; Compose overrides the host to `redis` |
+| `DOWNLOAD_DIR` | `/tmp/tg_downloads` | Working directory for media |
+| `MAX_FILE_SIZE_MB` | `50` | Configured media size threshold |
+| `MAX_CONCURRENT_PER_USER` | `2` | Per-user download slots |
+| `MAX_GLOBAL_CONCURRENT` | `20` | Global slots; the example environment uses `10` |
+| `ACTIVE_DOWNLOAD_TTL_SECONDS` | `3600` | Expiry for active-download counters |
+| `MAX_PLAYLIST_VIDEOS` | `5` | Playlist limit |
+| `COOKIE_EXPIRE_DAYS` | `30` | Stored-cookie expiry |
+| `FILE_EXPIRE_HOURS` | `24` | Uploaded-file metadata expiry |
+| `DEFAULT_LANG` | `en` | Default interface language |
 | `LOG_LEVEL` | `INFO` | Logging level |
+| `LOG_FILE` | `logs/bot.log` | Log destination |
 
----
+For the complete template, see [`.env.example`](.env.example).
 
-## 📱 Commands
+## Commands
 
-| Command | Description |
-|---|---|
-| `/start` | Welcome message |
-| `/help` | Usage guide |
-| `/language` | Change interface language |
-| `/cookies` | Upload browser cookies (.txt) for private content |
-| `/deletecookies` | Remove stored cookies |
-| `/myfiles` | View & manage uploaded files |
-| `/stats` | Bot statistics *(admin only)* |
+| Command | Action |
+| :--- | :--- |
+| `/start`, `/help` | Introduction and usage |
+| `/language` | Change the interface language |
+| `/cookies`, `/deletecookies` | Add or remove authentication cookies |
+| `/myfiles` | List and manage uploaded media |
+| `/stats` | Usage statistics for configured admins |
 
----
+## Architecture
 
-## 🍪 Using Cookies (Private Content)
-
-To download private Instagram reels, TikTok private videos, etc.:
-
-1. Install browser extension: **[Get cookies.txt LOCALLY](https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)**
-2. Visit the site (Instagram, TikTok, etc.) while logged in
-3. Click the extension → Export cookies → Save as `.txt`
-4. Send `/cookies` to the bot → upload the `.txt` file
-
-Cookies expire after **30 days** and can be removed with `/deletecookies`.
-
----
-
-## 🏗️ Project Structure
-
-```
-Telegram-Bot/
-├── main.py                  # Bot entrypoint
-├── config.py                # pydantic-settings config
-├── states.py                # aiogram FSM states
-├── queue.py                 # asyncio concurrency management
-├── handlers/
-│   ├── start.py             # /start, /help, /language
-│   ├── download.py          # URL detection + download flow
-│   ├── upload.py            # User file uploads
-│   ├── cookies.py           # /cookies FSM
-│   ├── myfiles.py           # /myfiles
-│   └── admin.py             # /stats
-├── utils/
-│   ├── downloader.py        # yt-dlp core + retries + progress
-│   ├── compressor.py        # ffmpeg compression
-│   ├── uploader.py          # catbox.moe / file.io fallback
-│   ├── redis_client.py      # Redis operations
-│   └── i18n.py              # EN / UZ / RU translations
-├── middlewares/
-│   └── throttling.py        # Rate limiting
-├── keyboards/
-│   └── __init__.py          # Inline keyboards
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-└── .env.example
+```text
+main.py                 Polling, lifecycle, Redis state, middleware
+config.py               Validated environment configuration
+download_queue.py       Per-user and global download slots
+handlers/               Telegram commands, uploads, downloads, callbacks
+utils/                  yt-dlp, compression, uploads, Redis, translations
+middlewares/            Request throttling
+keyboards/              Inline controls
+tests/                  Offline configuration and routing regression tests
 ```
 
----
+`api/webhook.py` and `vercel.json` are legacy experimental files. The webhook path has not been validated for production: it does not initialize the polling app's Redis storage and middleware and lacks webhook secret verification. Use the documented polling deployment.
 
-## 🛠️ Tech Stack
-
-- **Python 3.12+**
-- **aiogram 3.13+** — async Telegram Bot API framework
-- **yt-dlp** — media downloader (1500+ sites)
-- **redis.asyncio** — async Redis client
-- **tenacity** — retry logic with exponential backoff
-- **ffmpeg** — video/audio compression
-- **pydantic-settings** — environment configuration
-- **structlog** — structured logging
-- **aiofiles / aiohttp** — async I/O
-
----
-
-## 📦 Supported Platforms (partial list)
-
-Instagram · TikTok · YouTube · Twitter/X · Facebook · Vimeo · SoundCloud · Pinterest · Reddit · Dailymotion · Twitch · Bilibili · NicoVideo · VK · OK.ru · and **1500+ more**.
-
----
-
----
-
-# All Saver Bot 🤖 (O'zbekcha)
-
-> Telegram media yuklovchi bot — Instagram, TikTok, YouTube, Twitter/X, Facebook, Vimeo, SoundCloud, Pinterest, Reddit va yt-dlp orqali 1500+ sayt.
-
-## 🚀 Tezkor ishga tushirish
-
-### Docker bilan (tavsiya etiladi)
+## Development
 
 ```bash
-git clone https://github.com/akmalzokirjonov/all-saver-bot.git
-cd all-saver-bot
-cp .env.example .env
-nano .env   # BOT_TOKEN va ADMIN_IDS ni kiriting
-
-docker-compose up -d --build
+python -m pip check
+python -m unittest discover -s tests -v
 ```
 
-Loglarni ko'rish:
-```bash
-docker-compose logs -f bot
-```
+GitHub Actions runs these checks on pushes and pull requests. Tests cover environment parsing and command routing without contacting Telegram, Redis, or media websites. Live downloads and deployment availability require a separately configured instance.
 
-### Lokal ishga tushirish
+## Handling credentials and media
 
-```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+Keep `.env`, cookies, logs, and runtime media out of version control and image layers. Both `.gitignore` and `.dockerignore` exclude them. Supply secrets at runtime.
 
-# Redis ishga tushirish
-docker run -d -p 6379:6379 redis:7-alpine
+Cookies can grant account access. Use only trusted bot deployments, remove cookies with `/deletecookies` when finished, and download only media you are authorized to access.
 
-# .env faylida: REDIS_URL=redis://localhost:6379/0
-python main.py
-```
+## O'zbekcha
 
-## Buyruqlar
+**All Saver Bot** — media havolalarini Telegram orqali yuklash va fayllarni boshqarish boti.
 
-| Buyruq | Tavsif |
-|---|---|
-| `/start` | Botni boshlash |
-| `/help` | Yordam |
-| `/language` | Tilni o'zgartirish |
-| `/cookies` | Shaxsiy kontent uchun cookies yuklash |
-| `/deletecookies` | Saqlangan cookies o'chirish |
-| `/myfiles` | Yuklangan fayllarni boshqarish |
-| `/stats` | Statistika *(faqat admin)* |
+1. Loyihani yuklab oling va `.env.example` nusxasini `.env` deb saqlang.
+2. BotFather bergan tokenni `BOT_TOKEN` ga yozing.
+3. Adminlar kerak bo'lsa, raqamli ID'larni `ADMIN_IDS=123456789,987654321` shaklida kiriting.
+4. `docker compose up -d --build` bilan ishga tushiring.
+5. Holatni `docker compose logs -f bot` orqali kuzating.
 
-## 🍪 Cookies (Shaxsiy kontent)
-
-Shaxsiy Instagram reels, TikTok videolarini yuklab olish uchun:
-
-1. Chrome kengaytmasini o'rnating: **Get cookies.txt LOCALLY**
-2. Saytga kiring (Instagram, TikTok va h.k.)
-3. Kengaytmani bosing → Export cookies → `.txt` sifatida saqlang
-4. Botga `/cookies` yuboring → `.txt` faylni yuboring
-
-Cookies **30 kun** saqlanadi.
+Tilni almashtirish: `/language` · Fayllar: `/myfiles` · Admin statistikasi: `/stats`.

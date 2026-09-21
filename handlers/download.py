@@ -18,6 +18,7 @@ import time
 from typing import Optional
 
 from aiogram import F, Router
+from aiogram.dispatcher.event.bases import SkipHandler
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
@@ -63,7 +64,9 @@ async def handle_text(message: Message, state: FSMContext) -> None:
         return
     url = extract_url(message.text or "")
     if not url:
-        return  # not a URL, ignore (other handlers may pick this up)
+        # Returning consumes the update in aiogram, preventing later command
+        # routers (/myfiles and /stats) from seeing it.
+        raise SkipHandler
 
     lang = await get_user_lang(user.id)
     user_id = user.id
